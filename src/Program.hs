@@ -1,14 +1,7 @@
 {-# OPTIONS_GHC -fno-warn-name-shadowing #-}
 {-# OPTIONS_GHC -fno-warn-unused-do-bind #-}
 
-module Program (
-    Program, State, Snapshot,
-    ProgramState, Runtime,
-    _label_, nop, inc, dec, gnz,
-    computeProgram, execProgram, traceProgram,
-    signature, freeVars, freeLabels,
-    exit, goto, clr, mov
-) where
+module Program where
 
 -- import Data.List
 import Data.Map ((!), notMember)
@@ -84,33 +77,7 @@ dec v = M.state $ appendIr $ Dec v
 gnz :: Variable -> Label -> Runtime Address
 gnz v l = M.state $ appendIr $ Gnz v l
 
--- State Monad based program
-
-computeProgram :: Runtime Variable -> [Value] -> (Variable, [Snapshot], Program)
-computeProgram code args =
-    let initVars = Map.fromList $ zip (Var <$> [0..]) (0:args) -- input var starts from 1
-        (retVar, ps) = M.runState code ([], State initVars Map.empty)
-    in (retVar, computation ps, fst ps)
-
-execProgram :: Runtime Variable -> [Value] -> Value
-execProgram code args =
-    let (retVar, snapshots, _) = computeProgram code args
-    in (varTable . snd . last $ snapshots) ! retVar
-
-traceProgram :: Runtime Variable -> [Value] -> IO ()
-traceProgram code args =
-    let (_, snapshots, program) = computeProgram code args
-        snapshots' = (\(i, s) -> (
-            map snd $ Map.toList $ varTable s, 
-            i, 
-            if i < length program then program !! i else Nop
-            )) <$> snapshots
-    in mapM_ print snapshots'
-
 -- Useful tools for writing program
-
-signature :: Runtime [Variable]
-signature = M.state $ \s -> (fst <$> Map.toAscList (varTable . snd $ s), s)
 
 freeVars :: Int -> Runtime [Variable]
 freeVars n = M.state $ \(p, State vars labels) ->
@@ -132,7 +99,7 @@ curAddr = M.state $ \s -> (length $ fst s, s)
 -- Basic Monad Macros
 
 exit :: Label
-exit = Label (-1)
+exit = Label 0
 
 goto :: Label -> Runtime Address
 goto l = do
