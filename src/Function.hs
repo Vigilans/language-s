@@ -7,11 +7,9 @@ import qualified Control.Monad.State as M
 
 type Signature = (Variable, [Variable])
 
-type FuncImpl = Signature -> Runtime Variable
+data Function = Function { argv :: Int, func :: Signature -> Runtime Address }
 
-data Function = Function { argv :: Int, func :: FuncImpl }
-
-function :: Int -> FuncImpl -> Function
+function :: Int -> (Signature -> Runtime Variable) -> Function
 function argv func = Function argv $ \(out, args) -> do
     (p, State vars labels, e) <- M.get
     let vars'  = Map.insertWith (const id) out 0 vars
@@ -21,34 +19,35 @@ function argv func = Function argv $ \(out, args) -> do
             | length args < argv = freeVars (argv - length args) >>= \rest -> return (args ++ rest)
             | length args > argv = return (take argv args)
             | otherwise = return args
-    ins <- fixInputList
-    func (out, ins)
+    ins  <- fixInputList
+    out' <- func (out, ins)
+    mov out out'
 
-unary :: FuncImpl -> Function
+unary :: (Signature -> Runtime Variable) -> Function
 unary = function 1
 
-binary :: FuncImpl -> Function
+binary :: (Signature -> Runtime Variable) -> Function
 binary = function 2
 
-ternary :: FuncImpl -> Function
+ternary :: (Signature -> Runtime Variable) -> Function
 ternary = function 3
 
 -- State Monad based program
 
-computeFunction :: Function -> [Value] -> (Variable, [Snapshot], Program)
+computeFunction :: Function -> [Value] -> ([Snapshot], Program)
 computeFunction (Function _ func) args =
-    let inputs     = take (length args) (Var <$> [1..]) -- >= 1 for xs, 0 for y
+    let inputs     = take (length args) (Var <$> [1..]) -- input starts from 1
         signature  = (Var 0, inputs) -- goto -1 will terminate program
         emptyState = ([], State Map.empty Map.empty, Label (-1))
-        (output, (p, State vs ls, _)) = M.runState (func signature) emptyState
+        (p, State vs ls, _) = M.execState (func signature) emptyState
         constants  = [(true, 1), (false, 0)]
         initVars   = Map.fromList $ zip inputs args ++ constants
         initState  = State (Map.union initVars vs) ls -- feed state with inputs
-    in (output, computation p initState, p)
+    in (computation p initState, p)
 
 traceFunction :: Function -> [Value] -> IO ()
 traceFunction func args =
-    let (_, snapshots, program) = computeFunction func args
+    let (snapshots, program) = computeFunction func args
         snapshots' = (\(i, s) -> (
             map snd . filter ((>=Var 0).fst) . Map.toList . varTable $ s,
             i,
@@ -58,8 +57,8 @@ traceFunction func args =
 
 invoke :: Function -> [Value] -> Value -- inovke as true function
 invoke func args =
-    let (retVar, snapshots, _) = computeFunction func args
-    in (varTable . snd . last $ snapshots) ! retVar
+    let (snapshots, _) = computeFunction func args
+    in (varTable . snd . last $ snapshots) ! Var 0 -- 0 reserved for output
 
 call :: Function -> (Variable, [Variable]) -> Runtime Address
 call (Function _ func) (out, ins) = do
@@ -68,9 +67,9 @@ call (Function _ func) (out, ins) = do
     [e]    <- freeLabels 1
     mapM_ (uncurry mov) $ zip xs ins
     _exit_ e
-    result <- func (y, xs)
+    func (y, xs)
     _label_ e
-    mov out result
+    mov out y
     _exit_ exit
 
 ret :: Variable -> Runtime Variable
