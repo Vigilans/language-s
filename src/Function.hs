@@ -7,10 +7,12 @@ import qualified Control.Monad.State as M
 
 type Signature = (Variable, [Variable])
 
-type Function = Signature -> Runtime Variable
+type FuncImpl = Signature -> Runtime Variable
 
-function :: Int -> Function -> Function
-function argv func (out, args) = do
+data Function = Function { argv :: Int, func :: FuncImpl }
+
+function :: Int -> FuncImpl -> Function
+function argv func = Function argv $ \(out, args) -> do
     (p, State vars labels, e) <- M.get
     let vars'  = Map.insertWith (const id) out 0 vars
         vars'' = foldl (\vs v -> Map.insertWith (const id) v 0 vs) vars' args
@@ -22,19 +24,19 @@ function argv func (out, args) = do
     ins <- fixInputList
     func (out, ins)
 
-unary :: Function -> Function
+unary :: FuncImpl -> Function
 unary = function 1
 
-binary :: Function -> Function
+binary :: FuncImpl -> Function
 binary = function 2
 
-ternary :: Function -> Function
+ternary :: FuncImpl -> Function
 ternary = function 3
 
 -- State Monad based program
 
 computeFunction :: Function -> [Value] -> (Variable, [Snapshot], Program)
-computeFunction func args =
+computeFunction (Function _ func) args =
     let inputs     = take (length args) (Var <$> [1..]) -- >= 1 for xs, 0 for y
         signature  = (Var 0, inputs) -- goto -1 will terminate program
         emptyState = ([], State Map.empty Map.empty, Label (-1))
@@ -60,7 +62,7 @@ invoke func args =
     in (varTable . snd . last $ snapshots) ! retVar
 
 call :: Function -> (Variable, [Variable]) -> Runtime Address
-call func (out, ins) = do
+call (Function _ func) (out, ins) = do
     (_, _, exit) <- M.get
     (y:xs) <- freeVars (1 + length ins)
     [e]    <- freeLabels 1
@@ -76,5 +78,3 @@ ret out = do
     (_, _, exit) <- M.get
     goto exit
     return out
-
-    
