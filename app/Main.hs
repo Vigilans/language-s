@@ -4,7 +4,7 @@
 import Program
 import Function
 
-idP = unary $ \(y, [x]) -> do
+identity = unary $ \(y, [x]) -> do
     -- declearation
     [z]    <- freeVars 1
     [a, b] <- freeLabels 2
@@ -19,9 +19,9 @@ idP = unary $ \(y, [x]) -> do
     -- return statement
     ret y
 
-id' x = invoke idP [x]
+id' x = invoke identity [x]
 
-addP = binary $ \(y, [x1, x2]) -> do
+add = binary $ \(y, [x1, x2]) -> do
     [z] <- freeVars 1
     [a, b] <- freeLabels 2
     mov y x1
@@ -35,11 +35,11 @@ addP = binary $ \(y, [x1, x2]) -> do
     goto b
     ret y
 
-(>+<) x1 x2 = invoke addP [x1, x2]
+(>+<) x1 x2 = invoke add [x1, x2]
 
-tripleP = unary $ \(y, [x]) -> do
-    call addP (y, [x, x])
-    call addP (y, [y, x])
+triple = unary $ \(y, [x]) -> do
+    call add (y, [x, x])
+    call add (y, [y, x])
     ret y
 
 main :: IO ()
