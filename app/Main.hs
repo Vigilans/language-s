@@ -4,10 +4,7 @@
 import Program
 import Function
 
--- f(x) = | 1, x = 0
---        | x, x > 0
-
-idProg = unary $ \(y, [x], exit) -> do
+idP = unary $ \(y, [x], exit) -> do
     -- declearation
     [z]    <- freeVars 1
     [a, b] <- freeLabels 2
@@ -22,13 +19,13 @@ idProg = unary $ \(y, [x], exit) -> do
     -- return statement
     return y
 
-id' x = invoke idProg [x] 
+id' x = invoke idP [x]
 
-addProg = binary $ \(y, [x1, x2], exit) -> do
+addP = binary $ \(y, [x1, x2], exit) -> do
     [z] <- freeVars 1
     [a, b] <- freeLabels 2
-    asgn y x1
-    asgn z x2
+    mov y x1
+    mov z x2
     _label_ b
     gnz z a
     goto exit
@@ -38,11 +35,11 @@ addProg = binary $ \(y, [x1, x2], exit) -> do
     goto b
     return y
 
-(>+<) x1 x2 = invoke addProg [x1, x2]
+(>+<) x1 x2 = invoke addP [x1, x2]
 
-triplingProg = unary $ \(y, [x], exit) -> do
-    call addProg (y, [x, x])
-    call addProg (y, [y, x])
+tripleP = unary $ \(y, [x], exit) -> do
+    call addP (y, [x, x])
+    call addP (y, [y, x])
     return y
 
 main :: IO ()

@@ -8,11 +8,12 @@ import Data.Map ((!), notMember)
 import qualified Data.Map as Map
 import qualified Control.Monad.State as M
 
--- Statement list:
+-- Instruction list:
 -- V <- V
 -- V <- V + 1
 -- V <- V - 1
 -- IF V /= 0 GOTO L 
+-- V <- V' (for performance and debug-friendly reason)
 
 newtype Variable = Var Int deriving (Show, Eq, Ord)
 
@@ -22,7 +23,7 @@ newtype Label = Label Int deriving (Show, Eq, Ord)
 
 type Address = Int
 
-data Instruction = Nop | Inc Variable | Dec Variable | Gnz Variable Label deriving (Show)
+data Instruction = Nop | Inc Variable | Dec Variable | Gnz Variable Label | Mov Variable Variable deriving (Show)
 
 type Program = [Instruction]
 
@@ -42,6 +43,7 @@ successor program (i, State vars labels)
         Nop   -> (i + 1, State vars labels)
         Inc v -> (i + 1, State (Map.update (\val -> Just (val + 1)) v vars) labels)
         Dec v -> (i + 1, State (Map.update (\val -> Just (max (val - 1) 0)) v vars) labels)
+        Mov y x -> (i + 1, State (Map.update (\_ -> Just (vars! x)) y vars) labels)
         Gnz v l | vars ! v == 0      -> (i + 1, s)
                 | notMember l labels -> (t, s)
                 | labels ! l < 0     -> (t, s)
@@ -77,6 +79,9 @@ dec v = M.state $ appendIr $ Dec v
 gnz :: Variable -> Label -> Runtime Address
 gnz v l = M.state $ appendIr $ Gnz v l
 
+mov :: Variable -> Variable -> Runtime Address
+mov y x = M.state $ appendIr $ Mov y x -- NOTE: y - out, x - in, opposite of mov in ASM.
+
 -- Useful tools for writing program
 
 freeVars :: Int -> Runtime [Variable]
@@ -101,14 +106,25 @@ curAddr = M.state $ \s -> (length $ fst s, s)
 -- Basic Monad Macros
 
 true :: Variable
-true = Var (-1)
+true = Var (-1)  -- 1
 
 false :: Variable
-false = Var (-2)
+false = Var (-2) -- 0
 
 goto :: Label -> Runtime Address
 goto = gnz true
 
+clr :: Variable -> Runtime Address
+clr v = mov v false
+
+gz :: Variable -> Label -> Runtime Address
+gz v l = do -- goto if zero
+    [e] <- freeLabels 1
+    gnz v e
+    goto l
+    _label_ e
+
+{- mov is now a basic instruction
 clr :: Variable -> Runtime Address
 clr v = do
     [l] <- freeLabels 1
@@ -116,8 +132,8 @@ clr v = do
     dec v
     gnz v l
 
-asgn :: Variable -> Variable -> Runtime Address
-asgn y x = do
+mov :: Variable -> Variable -> Runtime Address
+mov y x = do
     [z] <- freeVars 1
     [a, b, c, d, e] <- freeLabels 5
     clr y
@@ -137,3 +153,4 @@ asgn y x = do
     inc x
     goto c
     _label_ e
+-}

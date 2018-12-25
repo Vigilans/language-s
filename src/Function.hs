@@ -28,6 +28,9 @@ unary = function 1
 binary :: Function -> Function
 binary = function 2
 
+ternary :: Function -> Function
+ternary = function 3
+
 -- State Monad based program
 
 computeFunction :: Function -> [Value] -> (Variable, [Snapshot], Program)
@@ -37,7 +40,7 @@ computeFunction func args =
         signature  = (Var 0, inputs, Label (-1)) -- goto -1 will terminate program
         (output, (p, State vs ls)) = M.runState (func signature) ([], emptyState)
         constants  = [(true, 1), (false, 0)]
-        initVars   = Map.fromList $ (zip inputs args) ++ constants
+        initVars   = Map.fromList $ zip inputs args ++ constants
         initState  = State (Map.union initVars vs) ls -- feed state with inputs
     in (output, computation (p, initState) , p)
 
@@ -60,7 +63,7 @@ call :: Function -> (Variable, [Variable]) -> Runtime Address
 call func (out, ins) = do
     (y:xs) <- freeVars (1 + length ins)
     [e] <- freeLabels 1
-    mapM_ (\(x, input) -> asgn x input) $ zip xs ins
+    mapM_ (uncurry mov) $ zip xs ins
     func (y, xs, e)
     _label_ e
-    asgn out y
+    mov out y
