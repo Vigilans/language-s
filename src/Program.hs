@@ -107,10 +107,7 @@ false :: Variable
 false = Var (-2)
 
 goto :: Label -> Runtime Address
-goto l = do
-    [z] <- freeVars 1
-    inc z
-    gnz z l
+goto = gnz true
 
 clr :: Variable -> Runtime Address
 clr v = do

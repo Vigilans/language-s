@@ -40,9 +40,9 @@ addProg = binary $ \(y, [x1, x2], exit) -> do
 
 (>+<) x1 x2 = invoke addProg [x1, x2]
 
-triplingProg = unary $ \(y, [x]) -> do
+triplingProg = unary $ \(y, [x], exit) -> do
     call addProg (y, [x, x])
-    -- call addProg (y, [y, x])
+    call addProg (y, [y, x])
     return y
 
 main :: IO ()

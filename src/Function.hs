@@ -45,7 +45,7 @@ traceFunction :: Function -> [Value] -> IO ()
 traceFunction func args =
     let (_, snapshots, program) = computeFunction func args
         snapshots' = (\(i, s) -> (
-            map snd $ Map.toList $ varTable s,
+            map snd . filter ((>=Var 0).fst) . Map.toList . varTable $ s,
             i,
             if i < length program then program !! i else Nop
             )) <$> snapshots
