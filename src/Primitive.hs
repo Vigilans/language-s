@@ -8,7 +8,7 @@ import qualified Control.Monad.State as M
 con :: Function -> [Function] -> Function
 con f gs | length gs == k = case gs of
     (g : gs) | all ((n ==) . argv) gs -> function n $ \(y, xs) -> do
-        zs  <- freeVars k
+        zs <- freeVars k
         mapM_ (\(g, z) -> call g (z, xs)) $ zip gs zs
         call f (y, zs)
         ret y

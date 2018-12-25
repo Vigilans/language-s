@@ -3,6 +3,11 @@
 
 import Program
 import Function
+import Primitive
+
+-- Primitive recursive functions
+
+add' = rec (u 1 0) (con s [u 3 1])
 
 identity = unary $ \(y, [x]) -> do
     -- declearation
@@ -20,27 +25,6 @@ identity = unary $ \(y, [x]) -> do
     ret y
 
 id' x = invoke identity [x]
-
-add = binary $ \(y, [x1, x2]) -> do
-    [z] <- freeVars 1
-    [a, b] <- freeLabels 2
-    mov y x1
-    mov z x2
-    _label_ b
-    gnz z a
-    ret y
-    _label_ a
-    dec z
-    inc y
-    goto b
-    ret y
-
-(>+<) x1 x2 = invoke add [x1, x2]
-
-triple = unary $ \(y, [x]) -> do
-    call add (y, [x, x])
-    call add (y, [y, x])
-    ret y
 
 main :: IO ()
 main = print "Hello"
