@@ -34,7 +34,7 @@ data State = State {
 
 type Snapshot = (Int, State)
 
-type ProgramState = (Program, State)
+type ProgramState = (Program, State, Label) -- Label refers to ExitLabel
 
 successor :: Program -> Snapshot -> Snapshot
 successor program (i, State vars labels)
@@ -52,20 +52,23 @@ successor program (i, State vars labels)
     where s = State vars labels
           t = length program
 
-computation :: ProgramState -> [Snapshot] -- equivalent as "takeUntil"
-computation (p, s) = foldr (\x ys -> if fst x /= length p then x:ys else [x]) [] $ iterate (successor p) (0, s)
+computation :: Program -> State -> [Snapshot] -- equivalent as "takeUntil"
+computation p s = foldr (\x ys -> if fst x /= length p then x:ys else [x]) [] $ iterate (successor p) (0, s)
 
 -- Monad instructions
 
 type Runtime = M.State ProgramState
 
 appendIr :: Instruction -> ProgramState -> (Address, ProgramState)
-appendIr ir (p, s) = (length p, (p ++ [ir] , s)) -- TODO: append to last effiently
+appendIr ir (p, s, e) = (length p, (p ++ [ir] , s, e)) -- first pass does not account for much performance cost
 
 _label_ :: Label -> Runtime Address
-_label_ l = M.state $ \(p, State vs ls) ->
+_label_ l = M.state $ \(p, State vs ls, e) ->
     let addr = length p
-    in (addr, (p, State vs (Map.insert l addr ls)))
+    in (addr, (p, State vs (Map.insert l addr ls), e))
+
+_exit_ :: Label -> Runtime Address
+_exit_ e = M.state $ \(p, State vs ls, _) -> (length p, (p, State vs ls, e))
 
 nop :: Runtime Address
 nop = M.state $ appendIr Nop
@@ -85,23 +88,23 @@ mov y x = M.state $ appendIr $ Mov y x -- NOTE: y - out, x - in, opposite of mov
 -- Useful tools for writing program
 
 freeVars :: Int -> Runtime [Variable]
-freeVars n = M.state $ \(p, State vars labels) ->
+freeVars n = M.state $ \(p, State vars labels, e) ->
     let firstFree = case Map.keys vars of
             [] -> 0
             vs -> (\(Var n) -> n) (maximum $ Map.keys vars) + 1
         newVars = take n (Var <$> [firstFree..])
-    in (newVars, (p, State (foldl (\vs v -> Map.insert v 0 vs) vars newVars) labels))
+    in (newVars, (p, State (foldl (\vs v -> Map.insert v 0 vs) vars newVars) labels, e))
 
 freeLabels :: Int -> Runtime [Label]
-freeLabels n = M.state $ \(p, State vars labels) ->
+freeLabels n = M.state $ \(p, State vars labels, e) ->
     let firstFree = case Map.keys labels of
             [] -> 0
             ls -> (\(Label n) -> n) (maximum $ Map.keys labels) + 1
         newLabels = take n (Label <$> [firstFree..])
-    in (newLabels, (p, State vars (foldl (\ls l -> Map.insert l (-1) ls) labels newLabels)))
+    in (newLabels, (p, State vars (foldl (\ls l -> Map.insert l (-1) ls) labels newLabels), e))
 
 curAddr :: Runtime Address
-curAddr = M.state $ \s -> (length $ fst s, s)
+curAddr = M.state $ \s -> (length $ (\(p, _, _) -> p) s, s)
 
 -- Basic Monad Macros
 
