@@ -81,7 +81,9 @@ gnz v l = M.state $ appendIr $ Gnz v l
 
 freeVars :: Int -> Runtime [Variable]
 freeVars n = M.state $ \(p, State vars labels) ->
-    let firstFree = (\(Var n) -> n) (maximum $ Map.keys vars) + 1 -- vars is definitely not empty
+    let firstFree = case Map.keys vars of
+            [] -> 0
+            vs -> (\(Var n) -> n) (maximum $ Map.keys vars) + 1
         newVars = take n (Var <$> [firstFree..])
     in (newVars, (p, State (foldl (\vs v -> Map.insert v 0 vs) vars newVars) labels))
 
@@ -114,8 +116,8 @@ clr v = do
     dec v
     gnz v l
 
-mov :: Variable -> Variable -> Runtime Address
-mov x y = do
+asgn :: Variable -> Variable -> Runtime Address
+asgn y x = do
     [z] <- freeVars 1
     [a, b, c, d, e] <- freeLabels 5
     clr y

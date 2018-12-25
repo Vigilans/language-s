@@ -27,8 +27,8 @@ id' x = invoke idProg [x]
 addProg = binary $ \(y, [x1, x2]) -> do
     [z] <- freeVars 1
     [a, b] <- freeLabels 2
-    mov x1 y
-    mov x2 z
+    asgn y x1
+    asgn z x2
     _label_ b
     gnz z a
     goto exit

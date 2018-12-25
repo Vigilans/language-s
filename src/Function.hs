@@ -5,24 +5,25 @@ import Data.Map ((!))
 import qualified Data.Map as Map
 import qualified Control.Monad.State as M
 
-type ProtoFunction = (Variable, [Variable]) -> Runtime Variable
+type Function = (Variable, [Variable]) -> Runtime Variable
 
-type Function = [Variable] -> Runtime Variable
-
-function :: Int -> ProtoFunction -> Function
-function argv func args = do
-    [out] <- freeVars 1
-    let fixArgsList
+function :: Int -> Function -> Function
+function argv func (out, args) = do
+    (p, State vars labels) <- M.get
+    let vars'  = Map.insertWith (const id) out 0 vars
+        vars'' = foldl (\vs v -> Map.insertWith (const id) v 0 vs) vars' args
+    M.put (p, State vars'' labels)
+    let fixInputList
             | length args < argv = freeVars (argv - length args) >>= \rest -> return (args ++ rest)
             | length args > argv = return (take argv args)
             | otherwise = return args
-    args' <- fixArgsList
-    func (out, args')
+    ins <- fixInputList
+    func (out, ins)
 
-unary :: ProtoFunction -> Function
+unary :: Function -> Function
 unary = function 1
 
-binary :: ProtoFunction -> Function
+binary :: Function -> Function
 binary = function 2
 
 -- State Monad based program
@@ -30,18 +31,19 @@ binary = function 2
 computeFunction :: Function -> [Value] -> (Variable, [Snapshot], Program)
 computeFunction func args =
     let inputs     = take (length args) (Var <$> [1..]) -- input var starts from 1
-        initVars   = Map.fromList $ (Var 0, 0):(zip inputs args) -- 0 reserved for y
+        initVars   = Map.fromList $ zip inputs args     -- 0 reserved for y
         initLabels = Map.fromList [(exit, -1)] -- 0 reserved for exit label
-        initState  = State initVars initLabels 
-        (retVar, ps) = M.runState (func inputs) ([], initState)  
-    in (retVar, computation ps, fst ps)
+        emptyState = State Map.empty initLabels
+        (output, (p, State vs ls)) = M.runState (func (Var 0, inputs)) ([], emptyState)
+        initState  = State (Map.union initVars vs) ls -- feed state with inputs
+    in (output, computation (p, initState) , p)
 
 traceFunction :: Function -> [Value] -> IO ()
 traceFunction func args =
     let (_, snapshots, program) = computeFunction func args
         snapshots' = (\(i, s) -> (
-            map snd $ Map.toList $ varTable s, 
-            i, 
+            map snd $ Map.toList $ varTable s,
+            i,
             if i < length program then program !! i else Nop
             )) <$> snapshots
     in mapM_ print snapshots'
