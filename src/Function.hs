@@ -5,7 +5,9 @@ import Data.Map ((!))
 import qualified Data.Map as Map
 import qualified Control.Monad.State as M
 
-type Function = (Variable, [Variable]) -> Runtime Variable
+type Signature = (Variable, [Variable])
+
+type Function = Signature -> Runtime Variable
 
 function :: Int -> Function -> Function
 function argv func (out, args) = do
@@ -48,7 +50,16 @@ traceFunction func args =
             )) <$> snapshots
     in mapM_ print snapshots'
 
-invoke :: Function -> [Value] -> Value
+invoke :: Function -> [Value] -> Value -- inovke as true function
 invoke func args =
     let (retVar, snapshots, _) = computeFunction func args
     in (varTable . snd . last $ snapshots) ! retVar
+
+call :: Function -> Signature -> Runtime Address
+call func (out, ins) = do
+    (y:xs) <- freeVars (1 + length ins)
+    [e] <- freeLabels 1
+    mapM_ (\(x, input) -> asgn x input) $ zip xs ins
+    func (y, xs)
+    _label_ e
+    asgn out y
