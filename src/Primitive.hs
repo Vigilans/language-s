@@ -6,27 +6,29 @@ import Data.Function (fix)
 import qualified Control.Monad.State as M
 
 con :: Function -> [Function] -> Function
-con f gs | length gs == k = case gs of
-    (g : gs) | all ((n ==) . argv) gs -> function n $ \(y, xs) -> do
+con f gs | (length gs == k) && all (\g -> argv g == n) (tail gs) =
+    function n $ \(y, xs) -> do
         zs <- freeVars k
         mapM_ (\(g, z) -> call g (z, xs)) $ zip gs zs
         call f (y, zs)
         ret y
-        where n = argv g
     where k = argv f
+          n = argv $ head gs
 
 rec :: Function -> Function -> Function
-rec f g | argv g == n + 2 = function (n + 1) $ \(y, t : xs) -> do
-    (_, _, exit) <- M.get
-    [z] <- freeVars 1
-    [a] <- freeLabels 1
-    call f (y, xs)
-    _label_ a
-    gz t exit
-    call g (y, z:y:xs)
-    inc z
-    dec t
-    ret y
+rec f g | argv g == n + 2 =
+    function (n + 1) $ \(y, t : xs) -> do
+        (_, _, exit) <- M.get
+        [z] <- freeVars 1
+        [a] <- freeLabels 1
+        call f (y, xs)
+        _label_ a
+        gz t exit
+        call g (y, z:y:xs)
+        inc z
+        dec t
+        goto a
+        ret y
     where n = argv f
 
 s :: Function
