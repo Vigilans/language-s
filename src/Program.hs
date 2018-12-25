@@ -100,8 +100,11 @@ curAddr = M.state $ \s -> (length $ fst s, s)
 
 -- Basic Monad Macros
 
-exit :: Label
-exit = Label 0
+true :: Variable
+true = Var (-1)
+
+false :: Variable
+false = Var (-2)
 
 goto :: Label -> Runtime Address
 goto l = do

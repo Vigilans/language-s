@@ -5,12 +5,12 @@ import Data.Map ((!))
 import qualified Data.Map as Map
 import qualified Control.Monad.State as M
 
-type Signature = (Variable, [Variable])
+type Signature = (Variable, [Variable], Label)
 
 type Function = Signature -> Runtime Variable
 
 function :: Int -> Function -> Function
-function argv func (out, args) = do
+function argv func (out, args, exit) = do
     (p, State vars labels) <- M.get
     let vars'  = Map.insertWith (const id) out 0 vars
         vars'' = foldl (\vs v -> Map.insertWith (const id) v 0 vs) vars' args
@@ -20,7 +20,7 @@ function argv func (out, args) = do
             | length args > argv = return (take argv args)
             | otherwise = return args
     ins <- fixInputList
-    func (out, ins)
+    func (out, ins, exit)
 
 unary :: Function -> Function
 unary = function 1
@@ -32,11 +32,12 @@ binary = function 2
 
 computeFunction :: Function -> [Value] -> (Variable, [Snapshot], Program)
 computeFunction func args =
-    let inputs     = take (length args) (Var <$> [1..]) -- input var starts from 1
-        initVars   = Map.fromList $ zip inputs args     -- 0 reserved for y
-        initLabels = Map.fromList [(exit, -1)] -- 0 reserved for exit label
-        emptyState = State Map.empty initLabels
-        (output, (p, State vs ls)) = M.runState (func (Var 0, inputs)) ([], emptyState)
+    let inputs     = take (length args) (Var <$> [1..]) -- >= 1 for xs, 0 for y
+        emptyState = State Map.empty Map.empty
+        signature  = (Var 0, inputs, Label (-1)) -- goto -1 will terminate program
+        (output, (p, State vs ls)) = M.runState (func signature) ([], emptyState)
+        constants  = [(true, 1), (false, 0)]
+        initVars   = Map.fromList $ (zip inputs args) ++ constants
         initState  = State (Map.union initVars vs) ls -- feed state with inputs
     in (output, computation (p, initState) , p)
 
@@ -55,11 +56,11 @@ invoke func args =
     let (retVar, snapshots, _) = computeFunction func args
     in (varTable . snd . last $ snapshots) ! retVar
 
-call :: Function -> Signature -> Runtime Address
+call :: Function -> (Variable, [Variable]) -> Runtime Address
 call func (out, ins) = do
     (y:xs) <- freeVars (1 + length ins)
     [e] <- freeLabels 1
     mapM_ (\(x, input) -> asgn x input) $ zip xs ins
-    func (y, xs)
+    func (y, xs, e)
     _label_ e
     asgn out y

@@ -7,7 +7,7 @@ import Function
 -- f(x) = | 1, x = 0
 --        | x, x > 0
 
-idProg = unary $ \(y, [x]) -> do
+idProg = unary $ \(y, [x], exit) -> do
     -- declearation
     [z]    <- freeVars 1
     [a, b] <- freeLabels 2
@@ -24,7 +24,7 @@ idProg = unary $ \(y, [x]) -> do
 
 id' x = invoke idProg [x] 
 
-addProg = binary $ \(y, [x1, x2]) -> do
+addProg = binary $ \(y, [x1, x2], exit) -> do
     [z] <- freeVars 1
     [a, b] <- freeLabels 2
     asgn y x1
