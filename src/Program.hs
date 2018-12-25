@@ -14,6 +14,7 @@ import qualified Control.Monad.State as M
 -- V <- V - 1
 -- IF V /= 0 GOTO L 
 -- V <- V' (for performance and debug-friendly reason)
+-- V <- Num (for numeric literal loading)
 
 newtype Variable = Var Int deriving (Show, Eq, Ord)
 
@@ -23,7 +24,13 @@ newtype Label = Label Int deriving (Show, Eq, Ord)
 
 type Address = Int
 
-data Instruction = Nop | Inc Variable | Dec Variable | Gnz Variable Label | Mov Variable Variable deriving (Show)
+data Instruction
+    = Nop
+    | Inc Variable
+    | Dec Variable
+    | Gnz Variable Label
+    | Set Variable Value 
+    | Mov Variable Variable deriving (Show)
 
 type Program = [Instruction]
 
@@ -43,6 +50,7 @@ successor program (i, State vars labels)
         Nop   -> (i + 1, State vars labels)
         Inc v -> (i + 1, State (Map.update (\val -> Just (val + 1)) v vars) labels)
         Dec v -> (i + 1, State (Map.update (\val -> Just (max (val - 1) 0)) v vars) labels)
+        Set y n -> (i + 1, State (Map.update (\_ -> Just n) y vars) labels)
         Mov y x -> (i + 1, State (Map.update (\_ -> Just (vars! x)) y vars) labels)
         Gnz v l | vars ! v == 0      -> (i + 1, s)
                 | notMember l labels -> (t, s)
@@ -81,6 +89,9 @@ dec v = M.state $ appendIr $ Dec v
 
 gnz :: Variable -> Label -> Runtime Address
 gnz v l = M.state $ appendIr $ Gnz v l
+
+set :: Variable -> Value -> Runtime Address
+set y n = M.state $ appendIr $ Set y n -- NOTE: y - out, x - in, opposite of mov in ASM.
 
 mov :: Variable -> Variable -> Runtime Address
 mov y x = M.state $ appendIr $ Mov y x -- NOTE: y - out, x - in, opposite of mov in ASM.

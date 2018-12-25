@@ -28,6 +28,9 @@ function argv func = Function argv $ \(out, args) -> do
     mov out out'
     _exit_ exit
 
+nullary :: (Signature -> Runtime Variable) -> Function
+nullary = function 0
+
 unary :: (Signature -> Runtime Variable) -> Function
 unary = function 1
 
