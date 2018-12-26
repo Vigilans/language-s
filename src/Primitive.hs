@@ -11,7 +11,7 @@ import Debug.Trace
 
 con :: Function -> [Function] -> Function
 con f gs | (length gs == k) && all (\g -> argv g == n) (tail gs) =
-    function  n $ \(y, xs)  -> 
+    function  n $ \(y, xs)  ->
     context k 0 $ \(zs, []) -> do
         (_, State vars _, _) <- M.get
         mapM_ (\(g, z) -> call g (z, xs)) $ zip gs zs
@@ -66,14 +66,14 @@ rev :: Function -> Function -- Flip argument list
 rev f | argv f == 2 = con f [u 2 1, u 2 0]
 
 apply :: Function -> Value -> Function -- Function currying
-apply f a = let n' = (argv f - 1); p = u n' 
-            in con f $ (k a % n'):(map p [0..n'-1])
+apply f a = let n' = (argv f - 1); p = u n'
+            in con f $ (k a % n'):map p [0..n'-1]
 
 pass :: Function -> Int -> Function -- Pass first k parameters
-pass f k = let n = argv f; p = u (k + n) 
+pass f k = let n = argv f; p = u (k + n)
            in con f (map p [k..k+n-1])
 
 fold :: Function -> Function -> Function -- Fold a function by its first parameter rolling
 fold b f | argv b == 2 = let n = argv f; p = u (n + 1)
-                         in rec (apply f 0) (con b [p 1, con f ((p 0):(map p [2..n]))])
+                         in rec (apply f 0) (con b [p 1, con f (con s [p 0]:map p [2..n])])
 

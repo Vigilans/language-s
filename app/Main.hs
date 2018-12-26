@@ -27,15 +27,18 @@ lt = con inv [ge]
 gt = con inv [le]
 
 if' p t f = con add [con mul [p, t], con mul [con inv [p], f]]
--- case' m ps ts f | length ps == length ts = 
---     rec (if' (head ps) (head ts) f)
 
 sum' = fold add
 prod = fold mul
 any' f = con sgn [sum' f]
 all' f = con sgn [prod f]
 
+min' p = if' (any' p) (sum' $ prod $ con inv [p]) (z % argv p)
+div' = con (min' $ con gt [con mul [con s [u 3 0], u 3 1], u 3 2]) [u 2 0, u 2 1, u 2 0] 
+mod' = con sub [u 2 0, con mul [u 2 1, div']]
 
+-- case' m ps ts f | length ps == length ts = 
+--     rec (if' (head ps) (head ts) f)
 
 main :: IO ()
 main = print "Hello"
