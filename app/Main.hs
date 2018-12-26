@@ -26,5 +26,9 @@ ge = rev le
 lt = con inv [ge]
 gt = con inv [le]
 
+{-
+    n <= √2 x < n + 1 <=> n^2 <= 2x^2 < n^2 + 2n + 1
+-}
+
 main :: IO ()
 main = print "Hello"

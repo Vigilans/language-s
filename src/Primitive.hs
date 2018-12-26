@@ -11,23 +11,22 @@ import Debug.Trace
 
 con :: Function -> [Function] -> Function
 con f gs | (length gs == k) && all (\g -> argv g == n) (tail gs) =
-    function n $ \(y, xs) -> context k 0 $ \(zs, []) -> do
+    function  n $ \(y, xs)  -> 
+    context k 0 $ \(zs, []) -> do
         (_, State vars _, _) <- M.get
         mapM_ (\(g, z) -> call g (z, xs)) $ zip gs zs
         call f (y, zs)
-        curAddr
     where k = argv f
           n = argv $ head gs
 
 rec :: Function -> Function -> Function
-rec f g | argv g == n + 2 = function (n + 1) $ \(y, t : xs) ->
+rec f g | argv g == n + 2 = function (n + 1) $ \(y, t:xs) ->
     context 1 1 $ \([z], [a]) -> do
         (_, _, exit) <- M.get
         call f (y, xs)
         _label_ a
         gz t exit
-        call g (y, z : y : xs)
-        addr <- curAddr
+        call g (y, z:y:xs)
         inc z
         dec t
         goto a
@@ -55,13 +54,13 @@ id' = u 1 0
 iota :: Function -> Function -- Nth iteration of f
 iota f = rec id' (con f [u (2 + argv f) 1])
 
-(^) :: Function -> Value -> Function
-f ^ n = unary $ \(y, [x]) -> do
+(>^<) :: Function -> Value -> Function
+f >^< n = unary $ \(y, [x]) -> do
     set y n
     call (iota s) (y, [y, x])
 
 k :: Value -> Function -- Constant k
-k n = con (s Primitive.^ n) [z]
+k n = con (s >^< n) [z]
 
 rev :: Function -> Function -- Flip argument list
 rev f | argv f == 2 = con f [u 2 1, u 2 0]
