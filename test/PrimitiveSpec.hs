@@ -9,11 +9,11 @@ import Primitive
 spec :: Spec
 spec =
     describe "PrimitiveSpec.intials'" $ do
+        it "z() = 0" $
+            property $ \x xs -> all (\x -> invoke z [x] == 0) $ abs <$> (x:xs)
+
         it "s(x) = x + 1" $
             property $ \x xs -> all (\x -> invoke s [x] == (x + 1)) $ abs <$> (x:xs)
-
-        it "n(x) = 0" $
-            property $ \x xs -> all (\x -> invoke n [x] == 0) $ abs <$> (x:xs)
 
         it "u(1, 0)(x) = x" $
             property $ \x xs -> all (\x -> invoke (u 1 0) [x] == x) $ abs <$> (x:xs)

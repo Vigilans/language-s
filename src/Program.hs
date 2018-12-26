@@ -4,9 +4,11 @@
 module Program where
 
 -- import Data.List
+import Data.Maybe
 import Data.Map ((!), notMember)
 import qualified Data.Map as Map
 import qualified Control.Monad.State as M
+import           Debug.Trace
 
 -- Instruction list:
 -- V <- V
@@ -48,10 +50,10 @@ successor program (i, State vars labels)
     | i == t = (t, s)
     | otherwise = case program !! i of
         Nop   -> (i + 1, State vars labels)
-        Inc v -> (i + 1, State (Map.update (\val -> Just (val + 1)) v vars) labels)
-        Dec v -> (i + 1, State (Map.update (\val -> Just (max (val - 1) 0)) v vars) labels)
-        Set y n -> (i + 1, State (Map.update (\_ -> Just n) y vars) labels)
-        Mov y x -> (i + 1, State (Map.update (\_ -> Just (vars! x)) y vars) labels)
+        Inc v -> (i + 1, State (Map.alter (\val -> Just (fromMaybe 0 val + 1)) v vars) labels)
+        Dec v -> (i + 1, State (Map.alter (\val -> Just (max (fromMaybe 0 val - 1) 0)) v vars) labels)
+        Set y n -> (i + 1, State (Map.alter (\_ -> Just n) y vars) labels)
+        Mov y x -> (i + 1, State (Map.alter (\_ -> Just (vars! x)) y vars) labels)
         Gnz v l | vars ! v == 0      -> (i + 1, s)
                 | notMember l labels -> (t, s)
                 | labels ! l < 0     -> (t, s)
@@ -68,7 +70,7 @@ computation p s = foldr (\x ys -> if fst x /= length p then x:ys else [x]) [] $ 
 type Runtime = M.State ProgramState
 
 appendIr :: Instruction -> ProgramState -> (Address, ProgramState)
-appendIr ir (p, s, e) = (length p, (p ++ [ir] , s, e)) -- first pass does not account for much performance cost
+appendIr ir (p, s, e) = (length p, (p ++ [ir] , s, e))
 
 _label_ :: Label -> Runtime Address
 _label_ l = M.state $ \(p, State vs ls, e) ->
@@ -99,12 +101,16 @@ mov y x = M.state $ appendIr $ Mov y x -- NOTE: y - out, x - in, opposite of mov
 -- Useful tools for writing program
 
 freeVars :: Int -> Runtime [Variable]
-freeVars n = M.state $ \(p, State vars labels, e) ->
+freeVars n = do
+    (p, State vars labels, e) <- M.get
     let firstFree = case Map.keys vars of
             [] -> 0
             vs -> (\(Var n) -> n) (maximum $ Map.keys vars) + 1
         newVars = take n (Var <$> [firstFree..])
-    in (newVars, (p, State (foldl (\vs v -> Map.insert v 0 vs) vars newVars) labels, e))
+        vars' = foldl (\vs v -> Map.insert v 0 vs) vars newVars
+    M.put (p, State vars' labels, e)
+    mapM_ clr newVars -- clear all variables
+    return newVars
 
 freeLabels :: Int -> Runtime [Label]
 freeLabels n = M.state $ \(p, State vars labels, e) ->
@@ -116,13 +122,14 @@ freeLabels n = M.state $ \(p, State vars labels, e) ->
 
 context :: Int -> Int -> (([Variable], [Label]) -> Runtime Address) -> Runtime Address
 context nVars nLabels program = do
-    (p, s, exit) <- M.get
+    (_, State vars _, exit) <- M.get
     vs <- freeVars nVars
     (e:ls) <- freeLabels $ 1 + nLabels
     _exit_ e
     program (vs, ls)
     _label_ e
-    M.put (p, s, exit) -- recover last context
+    (p, State _ labels, _) <- M.get
+    M.put (p, State vars labels, exit) -- recover last variable and exit context
     curAddr
 
 curAddr :: Runtime Address

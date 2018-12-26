@@ -30,40 +30,30 @@ spec = do
 
 -- test functions
 
-identity = unary $ \(y, [x]) -> do
-    -- declearation
-    [z]    <- freeVars 1
-    [a, b] <- freeLabels 2
-    -- main program
+identity = unary $ \(y, [x]) -> Program.context 1 2 $ \([z], [a, b]) -> do
     _label_ a
     gnz x b
-    ret y
+    exit
     _label_ b
     dec x
     inc y
     gnz x a
-    -- return statement
-    ret y
 
 id' x = invoke identity [x]
 
-add = binary $ \(y, [x1, x2]) -> do
-    [z] <- freeVars 1
-    [a, b] <- freeLabels 2
+add = binary $ \(y, [x1, x2]) -> Program.context 1 2 $ \([z], [a, b]) -> do
     mov y x1
     mov z x2
     _label_ b
     gnz z a
-    ret y
+    exit
     _label_ a
     dec z
     inc y
     goto b
-    ret y
 
 (>+<) x1 x2 = invoke add [x1, x2]
 
 triple = unary $ \(y, [x]) -> do
     call add (y, [x, x])
     call add (y, [y, x])
-    ret y
