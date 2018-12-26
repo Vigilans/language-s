@@ -17,8 +17,8 @@ abf = con add [sub, rev sub]
 
 inv = con sub [k 1 % 1, u 1 0]
 sgn = con inv [inv]
-or  = con sgn [add]
-and = con sgn [mul]
+or'  = con sgn [add]
+and' = con sgn [mul]
 
 eq = con inv [abf]
 le = con inv [sub]
@@ -26,9 +26,16 @@ ge = rev le
 lt = con inv [ge]
 gt = con inv [le]
 
-{-
-    n <= √2 x < n + 1 <=> n^2 <= 2x^2 < n^2 + 2n + 1
--}
+if' p t f = con add [con mul [p, t], con mul [con inv [p], f]]
+-- case' m ps ts f | length ps == length ts = 
+--     rec (if' (head ps) (head ts) f)
+
+sum' = fold add
+prod = fold mul
+any' f = con sgn [sum' f]
+all' f = con sgn [prod f]
+
+
 
 main :: IO ()
 main = print "Hello"
