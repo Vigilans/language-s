@@ -114,6 +114,17 @@ freeLabels n = M.state $ \(p, State vars labels, e) ->
         newLabels = take n (Label <$> [firstFree..])
     in (newLabels, (p, State vars (foldl (\ls l -> Map.insert l (-1) ls) labels newLabels), e))
 
+context :: Int -> Int -> (([Variable], [Label]) -> Runtime Address) -> Runtime Address
+context nVars nLabels program = do
+    (p, s, exit) <- M.get
+    vs <- freeVars nVars
+    (e:ls) <- freeLabels $ 1 + nLabels
+    _exit_ e
+    program (vs, ls)
+    _label_ e
+    M.put (p, s, exit) -- recover last context
+    curAddr
+
 curAddr :: Runtime Address
 curAddr = M.state $ \s -> (length $ (\(p, _, _) -> p) s, s)
 
@@ -128,43 +139,14 @@ false = Var (-2) -- 0
 goto :: Label -> Runtime Address
 goto = gnz true
 
+exit :: Runtime Address
+exit = M.get >>= \(_, _, exit) -> goto exit
+
 clr :: Variable -> Runtime Address
 clr v = mov v false
 
 gz :: Variable -> Label -> Runtime Address
-gz v l = do -- goto if zero
-    [e] <- freeLabels 1
+gz v l = context 0 1 $ \([], [e]) -> do -- goto if zero
     gnz v e
     goto l
     _label_ e
-
-{- mov is now a basic instruction
-clr :: Variable -> Runtime Address
-clr v = do
-    [l] <- freeLabels 1
-    _label_ l
-    dec v
-    gnz v l
-
-mov :: Variable -> Variable -> Runtime Address
-mov y x = do
-    [z] <- freeVars 1
-    [a, b, c, d, e] <- freeLabels 5
-    clr y
-    _label_ a
-    gnz x b
-    goto c
-    _label_ b
-    dec x
-    inc y
-    inc z
-    goto a
-    _label_ c
-    gnz z d
-    goto e
-    _label_ d
-    dec z
-    inc x
-    goto c
-    _label_ e
--}
