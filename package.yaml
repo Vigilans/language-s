@@ -1,6 +1,6 @@
-name:                L-lang
+name:                S-lang
 version:             0.1.0.0
-github:              "Vigilans/L-lang"
+github:              "Vigilans/S-lang"
 license:             BSD3
 author:              "Vigilans"
 maintainer:          "vigilans@foxmail.com"
@@ -16,7 +16,7 @@ extra-source-files:
 # To avoid duplicated efforts in documentation and dealing with the
 # complications of embedding Haddock markup inside cabal files, it is
 # common to point users to the README.md file.
-description:         Please see the README on GitHub at <https://github.com/Vigilans/L-lang#readme>
+description:         Please see the README on GitHub at <https://github.com/Vigilans/S-lang#readme>
 
 dependencies:
 - base >= 4.7 && < 5
@@ -28,7 +28,7 @@ library:
   source-dirs: src
 
 executables:
-  L-lang-exe:
+  S-lang-exe:
     main:                Main.hs
     source-dirs:         app
     ghc-options:
@@ -36,10 +36,10 @@ executables:
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
-    - L-lang
+    - S-lang
 
 tests:
-  L-lang-test:
+  S-lang-test:
     main:                Spec.hs
     source-dirs:         test
     ghc-options:
@@ -47,6 +47,6 @@ tests:
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
-    - L-lang
+    - S-lang
     - hspec
     - QuickCheck

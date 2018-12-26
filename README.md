@@ -1,4 +1,4 @@
-# L-lang
+# S-lang
 
 Programming language on which the development of computability theory is based.
 

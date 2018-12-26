@@ -1,0 +1,67 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.31.1.
+--
+-- see: https://github.com/sol/hpack
+--
+-- hash: 82225e495b3029cbf7374f6f7144cf7b51978940034f018415eb7c10841c8df2
+
+name:           L-lang
+version:        0.1.0.0
+description:    Please see the README on GitHub at <https://github.com/Vigilans/L-lang#readme>
+homepage:       https://github.com/Vigilans/L-lang#readme
+bug-reports:    https://github.com/Vigilans/L-lang/issues
+author:         Vigilans
+maintainer:     vigilans@foxmail.com
+copyright:      2018 Vigilans
+license:        BSD3
+build-type:     Simple
+extra-source-files:
+    README.md
+
+source-repository head
+  type: git
+  location: https://github.com/Vigilans/L-lang
+
+library
+  exposed-modules:
+      Function
+      Program
+  other-modules:
+      Paths_L_lang
+  hs-source-dirs:
+      src
+  build-depends:
+      base >=4.7 && <5
+    , containers
+    , mtl
+  default-language: Haskell2010
+
+executable L-lang-exe
+  main-is: Main.hs
+  other-modules:
+      Paths_L_lang
+  hs-source-dirs:
+      app
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      L-lang
+    , base >=4.7 && <5
+    , containers
+    , mtl
+  default-language: Haskell2010
+
+test-suite L-lang-test
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+  other-modules:
+      Paths_L_lang
+  hs-source-dirs:
+      test
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      L-lang
+    , base >=4.7 && <5
+    , containers
+    , mtl
+  default-language: Haskell2010
