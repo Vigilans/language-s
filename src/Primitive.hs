@@ -7,6 +7,8 @@ import Data.Foldable (toList)
 import qualified Data.Sequence as S
 import qualified Control.Monad.State as M
 
+-- Operators
+
 con :: Function -> [Function] -> Function
 con f gs | (length gs == k) && all (\g -> argv g == n) (tail gs) =
     function n $ \(y, xs) -> do
@@ -34,18 +36,30 @@ rec f g | argv g == n + 2 =
         ret y
     where n = argv f
 
-k :: Value -> Function
-k n = nullary $ \(y, []) -> do
-    set y n
+rev :: Function -> Function
+rev f = function (argv f) $ \(y, xs) -> do
+    case xs of
+        []     -> call f (y, [])
+        (x:xs) -> call f (y, xs ++ [x])
     ret y
+
+(%) :: Function -> Int -> Function
+(Function _ f) % n = Function n f -- rewrite argv
+
+-- Initial Functions
+
+n :: Function
+n = nullary $ \(_, _) -> ret false
 
 s :: Function
 s = unary $ \(y, [x]) -> do
     inc x
     ret x
 
-n :: Function
-n = unary $ \(_, _) -> ret false
-
 u :: Int -> Int -> Function
 u n i = function n $ \(y, xs) -> ret $ xs !! i
+
+k :: Value -> Function
+k n = nullary $ \(y, []) -> do
+    set y n
+    ret y
