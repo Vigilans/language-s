@@ -33,7 +33,7 @@ prod = fold mul
 any' f = con sgn [sum' f]
 all' f = con sgn [prod f]
 
-min' p = if' (any' p) (sum' $ prod $ con inv [p]) (z % argv p)
+min' p = if' (any' p) (sum' $ prod $ con inv [p]) (z % argc p)
 div' = con (min' $ con gt [con mul [con s [u 3 0], u 3 1], u 3 2]) [u 2 0, u 2 1, u 2 0] 
 mod' = con sub [u 2 0, con mul [u 2 1, div']]
 

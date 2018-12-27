@@ -8,15 +8,15 @@ import Debug.Trace
 
 type Signature = (Variable, [Variable])
 
-data Function = Function { argv :: Int, func :: Signature -> Runtime Address }
+data Function = Function { argc :: Int, func :: Signature -> Runtime Address }
 
 function :: Int -> (Signature -> Runtime Address) -> Function
-function argv func = Function argv $ \(out, args) -> context 0 0 $ \_ -> do
+function argc func = Function argc $ \(out, args) -> context 0 0 $ \_ -> do
     (p, State vars labels, exit) <- M.get  
     let vars'  = Map.insertWith (const id) out 0 vars
         vars'' = foldl (\vs v -> Map.insertWith (const id) v 0 vs) vars' args
     M.put (p, State vars'' labels, exit)
-    rest <- freeVars $ max (argv - length args) 0
+    rest <- freeVars $ max (argc - length args) 0
     func (out, args ++ rest)
 
 nullary :: (Signature -> Runtime Address) -> Function
