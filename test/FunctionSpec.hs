@@ -30,7 +30,7 @@ spec = do
 
 -- test functions
 
-identity = unary $ \(y, [x]) -> Program.context 1 2 $ \([z], [a, b]) -> do
+identity = unaryC 1 2 $ \(y, [x], [z], [a, b]) -> do
     _label_ a
     gnz x b
     exit
@@ -41,7 +41,7 @@ identity = unary $ \(y, [x]) -> Program.context 1 2 $ \([z], [a, b]) -> do
 
 id' x = invoke identity [x]
 
-add = binary $ \(y, [x1, x2]) -> Program.context 1 2 $ \([z], [a, b]) -> do
+add = binaryC 1 2 $ \(y, [x1, x2], [z], [a, b]) -> do
     mov y x1
     mov z x2
     _label_ b

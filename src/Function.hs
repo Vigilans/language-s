@@ -19,17 +19,21 @@ function argc func = Function argc $ \(out, args) -> context 0 0 $ \_ -> do
     rest <- freeVars $ max (argc - length args) 0
     func (out, args ++ rest)
 
-nullary :: (Signature -> Runtime Address) -> Function
-nullary = function 0
+arbitrary = function (-1)
+nullary   = function 0
+unary     = function 1
+binary    = function 2
+ternary   = function 3
 
-unary :: (Signature -> Runtime Address) -> Function
-unary = function 1
+-- function with local context
+functionC argc nLocals nLabels func 
+    = function argc $ \(y, xs) -> context nLocals nLabels $ \(zs, ls) -> func (y, xs, zs, ls) 
 
-binary :: (Signature -> Runtime Address) -> Function
-binary = function 2
-
-ternary :: (Signature -> Runtime Address) -> Function
-ternary = function 3
+arbitraryC = function (-1)
+nullaryC   = functionC 0
+unaryC     = functionC 1
+binaryC    = functionC 2
+ternaryC   = functionC 3
 
 -- State Monad based program
 
@@ -59,11 +63,11 @@ invoke func args =
     let (snapshots, _) = computeFunction func args
     in (varTable . snd . last $ snapshots) ! Var 0 -- 0 reserved for output
 
-call :: Function -> (Variable, [Variable]) -> Runtime Address
+call :: Function -> Signature -> Runtime Address
 call (Function _ func) (out, ins) = context (1 + length ins) 0 $ \(y:xs, []) -> do
     clr y
     mapM_ (uncurry mov) $ zip xs ins
-    func (y, xs) -- exit label is set inside func
+    func (y, xs)
     mov out y
 
 ret :: Runtime Address
